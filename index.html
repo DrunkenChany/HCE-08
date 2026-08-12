@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>회원가입</title>
+  <!-- Supabase JS Client library -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --primary-color: #4F46E5;
+      --primary-hover: #4338CA;
+      --bg-color: #F9FAFB;
+      --card-bg: #FFFFFF;
+      --text-main: #111827;
+      --text-muted: #6B7280;
+      --border-color: #D1D5DB;
+      --error-color: #EF4444;
+      --success-color: #10B981;
+      --warning-color: #F59E0B;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .signup-container {
+      background-color: var(--card-bg);
+      width: 100%;
+      max-width: 480px;
+      padding: 36px 32px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+    }
+
+    .signup-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .signup-header h1 {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 8px;
+    }
+
+    .signup-header p {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--text-main);
+    }
+
+    .form-group label .required {
+      color: var(--error-color);
+    }
+
+    .input-wrapper {
+      position: relative;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 12px 14px;
+      font-size: 15px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .form-input:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+    }
+
+    .field-msg {
+      font-size: 12px;
+      margin-top: 6px;
+      min-height: 16px;
+    }
+
+    .field-msg.error { color: var(--error-color); }
+    .field-msg.warning { color: var(--warning-color); }
+    .field-msg.success { color: var(--success-color); }
+
+    /* 비밀번호 복잡도 체크박스 UI */
+    .password-rules {
+      background-color: #F3F4F6;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 8px;
+      font-size: 13px;
+    }
+
+    .rule-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .rule-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .rule-item.valid {
+      color: var(--success-color);
+      font-weight: 600;
+    }
+
+    /* 약관 동의 영역 */
+    .terms-box {
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px;
+      background-color: #FAFAFA;
+      margin-bottom: 24px;
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text-main);
+      cursor: pointer;
+    }
+
+    .checkbox-label input[type="checkbox"] {
+      margin-top: 2px;
+      width: 16px;
+      height: 16px;
+      accent-color: var(--primary-color);
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: 14px;
+      font-size: 16px;
+      font-weight: 600;
+      color: #FFFFFF;
+      background-color: var(--primary-color);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .submit-btn:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .submit-btn:disabled {
+      background-color: #A5B4FC;
+      cursor: not-allowed;
+    }
+
+    .alert-box {
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .alert-box.error {
+      background-color: #FEE2E2;
+      color: #991B1B;
+      border: 1px solid #FCA5A5;
+    }
+
+    .alert-box.success {
+      background-color: #D1FAE5;
+      color: #065F46;
+      border: 1px solid #6EE7B7;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="signup-container">
+    <div class="signup-header">
+      <h1>회원가입</h1>
+      <p>계정을 생성하여 서비스를 이용해보세요.</p>
+    </div>
+
+    <div id="global-alert" class="alert-box"></div>
+
+    <form id="signup-form" novalidate>
+      <!-- 이메일 입력 -->
+      <div class="form-group">
+        <label for="email">이메일 주소 <span class="required">*</span></label>
+        <div class="input-wrapper">
+          <input type="email" id="email" class="form-input" placeholder="example@domain.com" required>
+        </div>
+        <div id="email-msg" class="field-msg"></div>
+      </div>
+
+      <!-- 비밀번호 입력 -->
+      <div class="form-group">
+        <label for="password">비밀번호 <span class="required">*</span></label>
+        <div class="input-wrapper">
+          <input type="password" id="password" class="form-input" placeholder="비밀번호 입력" required>
+        </div>
+        <div class="password-rules">
+          <div id="rule-length" class="rule-item">✓ 8자 이상</div>
+          <div id="rule-upper" class="rule-item">✓ 대문자 1개 이상 포함</div>
+          <div id="rule-number" class="rule-item">✓ 숫자 1개 이상 포함</div>
+          <div id="rule-special" class="rule-item">✓ 특수문자(!@$^* 등) 1개 이상 포함</div>
+        </div>
+      </div>
+
+      <!-- 비밀번호 확인 -->
+      <div class="form-group">
+        <label for="confirm-password">비밀번호 확인 <span class="required">*</span></label>
+        <div class="input-wrapper">
+          <input type="password" id="confirm-password" class="form-input" placeholder="비밀번호 재입력" required>
+        </div>
+        <div id="confirm-msg" class="field-msg"></div>
+      </div>
+
+      <!-- 이름 -->
+      <div class="form-group">
+        <label for="full-name">이름 <span class="required">*</span></label>
+        <input type="text" id="full-name" class="form-input" placeholder="홍길동" required>
+      </div>
+
+      <!-- 전화번호 -->
+      <div class="form-group">
+        <label for="phone">전화번호 <span class="required">*</span></label>
+        <input type="tel" id="phone" class="form-input" placeholder="01012345678" required>
+        <div id="phone-msg" class="field-msg"></div>
+      </div>
+
+      <!-- 개인정보 동의 -->
+      <div class="terms-box">
+        <label class="checkbox-label">
+          <input type="checkbox" id="privacy-consent" required>
+          <span>[필수] 개인정보 수집 및 이용(이름, 전화번호, 이메일 저장)에 동의합니다.</span>
+        </label>
+      </div>
+
+      <button type="submit" id="submit-btn" class="submit-btn">가입하기</button>
+    </form>
+  </div>
+
+  <script>
+    // Supabase 설정 (기본값 설정 및 GitHub 환경변수 주입 가능하도록 설계)
+    const SUPABASE_URL = window.ENV_SUPABASE_URL || "https://gjbukblcqhodewbsiyap.supabase.co";
+    const SUPABASE_ANON_KEY = window.ENV_SUPABASE_ANON_KEY || "sb_publishable_4xUJGbrbPD2hpIHByPp4FQ_zDH5RNPN";
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // 차단할 임시/임의 이메일 도메인 리스트
+    const DISPOSABLE_EMAIL_DOMAINS = [
+      'mailinator.com', 'tempmail.com', 'yopmail.com', '10minutemail.com',
+      'trashmail.com', 'guerrillamail.com', 'sharklasers.com', 'dispostable.com'
+    ];
+
+    // DOM 요소
+    const signupForm = document.getElementById('signup-form');
+    const emailInput = document.getElementById('email');
+    const emailMsg = document.getElementById('email-msg');
+    const passwordInput = document.getElementById('password');
+    const confirmInput = document.getElementById('confirm-password');
+    const confirmMsg = document.getElementById('confirm-msg');
+    const phoneInput = document.getElementById('phone');
+    const phoneMsg = document.getElementById('phone-msg');
+    const consentCheckbox = document.getElementById('privacy-consent');
+    const globalAlert = document.getElementById('global-alert');
+
+    // 비밀번호 검증 규칙 요소
+    const ruleLength = document.getElementById('rule-length');
+    const ruleUpper = document.getElementById('rule-upper');
+    const ruleNumber = document.getElementById('rule-number');
+    const ruleSpecial = document.getElementById('rule-special');
+
+    // 1. 이메일 검증 및 차단 도메인 체크
+    emailInput.addEventListener('input', () => {
+      const email = emailInput.value.trim();
+      emailMsg.textContent = '';
+      emailMsg.className = 'field-msg';
+
+      if (!email) return;
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        emailMsg.textContent = '올바른 이메일 형식이 아닙니다.';
+        emailMsg.classList.add('error');
+        return;
+      }
+
+      const domain = email.split('@')[1]?.toLowerCase();
+      if (DISPOSABLE_EMAIL_DOMAINS.includes(domain)) {
+        emailMsg.textContent = '⚠️ 임시/일회성 이메일 주소는 사용할 수 없습니다.';
+        emailMsg.classList.add('warning');
+      }
+    });
+
+    // 2. 비밀번호 유효성 실시간 점검 (난이도 중 이상)
+    function validatePassword(password) {
+      const isLength = password.length >= 8;
+      const hasUpper = /[A-Z]/.test(password);
+      const hasNumber = /[0-9]/.test(password);
+      const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+
+      ruleLength.classList.toggle('valid', isLength);
+      ruleUpper.classList.toggle('valid', hasUpper);
+      ruleNumber.classList.toggle('valid', hasNumber);
+      ruleSpecial.classList.toggle('valid', hasSpecial);
+
+      return isLength && hasUpper && hasNumber && hasSpecial;
+    }
+
+    passwordInput.addEventListener('input', () => {
+      validatePassword(passwordInput.value);
+      checkPasswordMatch();
+    });
+
+    // 3. 비밀번호 일치 확인
+    function checkPasswordMatch() {
+      const pwd = passwordInput.value;
+      const confirmPwd = confirmInput.value;
+
+      if (!confirmPwd) {
+        confirmMsg.textContent = '';
+        return false;
+      }
+
+      if (pwd === confirmPwd) {
+        confirmMsg.textContent = '비밀번호가 일치합니다.';
+        confirmMsg.className = 'field-msg success';
+        return true;
+      } else {
+        confirmMsg.textContent = '비밀번호가 일치하지 않습니다.';
+        confirmMsg.className = 'field-msg error';
+        return false;
+      }
+    }
+
+    confirmInput.addEventListener('input', checkPasswordMatch);
+
+    // 4. 전화번호 형식 자동 정제
+    phoneInput.addEventListener('input', (e) => {
+      let val = e.target.value.replace(/[^0-9]/g, '');
+      e.target.value = val;
+    });
+
+    // 알림 표시 함수
+    function showAlert(message, type = 'error') {
+      globalAlert.textContent = message;
+      globalAlert.className = `alert-box ${type}`;
+      globalAlert.style.display = 'block';
+    }
+
+    // 5. 폼 제출 및 Supabase 회원가입
+    signupForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      globalAlert.style.display = 'none';
+
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+      const fullName = document.getElementById('full-name').value.trim();
+      const phone = phoneInput.value.trim();
+
+      // 검증 단계
+      const domain = email.split('@')[1]?.toLowerCase();
+      if (DISPOSABLE_EMAIL_DOMAINS.includes(domain)) {
+        showAlert('임시/일회성 이메일은 가입에 사용할 수 없습니다.');
+        return;
+      }
+
+      if (!validatePassword(password)) {
+        showAlert('비밀번호가 설정 조건(대문자, 숫자, 특수문자 포함 8자 이상)을 충족하지 않습니다.');
+        return;
+      }
+
+      if (!checkPasswordMatch()) {
+        showAlert('비밀번호 확인이 일치하지 않습니다.');
+        return;
+      }
+
+      if (!fullName || !phone) {
+        showAlert('이름과 전화번호는 필수 입력 항목입니다.');
+        return;
+      }
+
+      if (!consentCheckbox.checked) {
+        showAlert('개인정보 수집 및 이용 동의에 체크해주세요.');
+        return;
+      }
+
+      const submitBtn = document.getElementById('submit-btn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = '가입 진행 중...';
+
+      try {
+        // Supabase Auth 회원가입 및 metadata에 이름/전화번호 전달
+        const { data, error } = await supabase.auth.signUp({
+          email: email,
+          password: password,
+          options: {
+            data: {
+              full_name: fullName,
+              phone: phone,
+              privacy_consent: true,
+              consent_at: new Date().toISOString()
+            }
+          }
+        });
+
+        if (error) {
+          if (error.message.includes('already registered') || error.status === 400) {
+            showAlert('이미 등록되어 있거나 중복된 이메일 주소입니다.');
+          } else {
+            showAlert(`회원가입 실패: ${error.message}`);
+          }
+        } else {
+          showAlert('회원가입이 성공적으로 완료되었습니다! 이메일 인증을 확인해보세요.', 'success');
+          signupForm.reset();
+          validatePassword('');
+        }
+      } catch (err) {
+        showAlert('가입 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '가입하기';
+      }
+    });
+  </script>
+</body>
+</html>
